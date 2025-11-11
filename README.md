@@ -1,18 +1,12 @@
-# 🚀 Fleeks CLI - Revolutionary AI-Powered Development Platform
+<div align="center">
+  <img src="fleeks-logo.png" alt="Fleeks Logo" width="600"/>
+  
+  # 🚀 Fleeks CLI - Revolutionary AI-Powered Development Platform
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org/dl/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/fleeks-inc/fleeks-cli/releases)
-
-```
-▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-██ ███████ ██      ██████████ ██████ ██    ██  ██████ ██
-██ ██      ██      ██      ██ ██     ██  ██   ██      ██
-██ ███████ ██      ████████   ██████ ████     ██████  ██
-██ ██      ██      ██         ██     ██  ██         ██ ██
-██ ██      ███████ ██         ██████ ██    ██ ██████  ██
-▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-```
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+  [![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org/dl/)
+  [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/fleeks-ai/fleeks-cli/releases)
+</div>
 
 ## 🌟 The World's First Universal AI Software Engineer CLI
 
