@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="fleeks-logo.png" alt="Fleeks Logo" width="600"/>
+  <img src="fleeks-logo.PNG" alt="Fleeks Logo" width="600"/>
   
   # 🚀 Fleeks CLI - Revolutionary AI-Powered Development Platform
 

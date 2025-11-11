@@ -24,6 +24,7 @@ go.work
 fleeks
 fleeks-*
 !fleeks-cli/
+!fleeks-logo.PNG
 
 # IDEs
 .idea/
