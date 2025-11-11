@@ -1,0 +1,218 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: Build Release Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Windows builds
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            binary_name: fleeks.exe
+            asset_name: fleeks-windows-amd64.exe
+          
+          # macOS builds
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            binary_name: fleeks
+            asset_name: fleeks-darwin-amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            binary_name: fleeks
+            asset_name: fleeks-darwin-arm64
+          
+          # Linux builds
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            binary_name: fleeks
+            asset_name: fleeks-linux-amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            binary_name: fleeks
+            asset_name: fleeks-linux-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -v -trimpath -ldflags="-s -w -X 'main.Version=${{ steps.get_version.outputs.VERSION }}' -X 'main.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" -o ${{ matrix.binary_name }} .
+
+      - name: Test binary
+        if: matrix.goos == runner.os
+        run: ./${{ matrix.binary_name }} --version
+
+      - name: Rename binary for upload
+        shell: bash
+        run: |
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            mv ${{ matrix.binary_name }} ${{ matrix.asset_name }}
+          else
+            mv ${{ matrix.binary_name }} ${{ matrix.asset_name }}
+            chmod +x ${{ matrix.asset_name }}
+          fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+          retention-days: 1
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R ./artifacts
+
+      - name: Move artifacts to release directory
+        run: |
+          mkdir -p ./release
+          find ./artifacts -type f -exec mv {} ./release/ \;
+          ls -lh ./release
+
+      - name: Generate checksums
+        working-directory: ./release
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Fleeks CLI ${{ steps.get_version.outputs.VERSION }}
+          
+          ### Installation
+          
+          #### macOS
+          ```bash
+          # Intel Macs
+          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-darwin-amd64 -o fleeks
+          chmod +x fleeks
+          sudo mv fleeks /usr/local/bin/
+          
+          # Apple Silicon (M1/M2)
+          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-darwin-arm64 -o fleeks
+          chmod +x fleeks
+          sudo mv fleeks /usr/local/bin/
+          ```
+          
+          #### Linux
+          ```bash
+          # AMD64
+          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-linux-amd64 -o fleeks
+          chmod +x fleeks
+          sudo mv fleeks /usr/local/bin/
+          
+          # ARM64
+          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-linux-arm64 -o fleeks
+          chmod +x fleeks
+          sudo mv fleeks /usr/local/bin/
+          ```
+          
+          #### Windows
+          Download `fleeks-windows-amd64.exe` and add it to your PATH.
+          
+          ### Verification
+          ```bash
+          fleeks --version
+          ```
+          
+          ### What's Changed
+          
+          See the [CHANGELOG](CHANGELOG.md) for full details.
+          
+          ### Checksums
+          
+          See `SHA256SUMS.txt` for file checksums.
+          EOF
+          cat release_notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          files: ./release/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Notify Release
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Release v${{ steps.get_version.outputs.VERSION }} published successfully!"
+          echo "📦 Binaries available for: Windows, macOS (Intel/ARM), Linux (AMD64/ARM64)"

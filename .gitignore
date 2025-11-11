@@ -1,0 +1,93 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Go workspace file
+go.work
+
+# Build artifacts
+fleeks
+fleeks-*
+!fleeks-cli/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+.env.development
+.env.staging
+.env.production
+
+# Keep example env files only
+!.env.example
+
+# Configuration files (keep examples)
+*.yaml.backup
+*.yml.backup
+.fleeksconfig.yaml
+!.fleeksconfig.example.yaml
+
+# Logs
+*.log
+logs/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage reports
+coverage.txt
+coverage.html
+*.cover
+
+# Profiling data
+*.pprof
+*.prof
+
+# Release archives
+*.tar.gz
+*.zip
+
+# Debug files
+debug
+__debug_bin
+
+# Air - Live reload for Go apps
+tmp/
+
+# Internal documentation (not for public)
+BACKEND_INTEGRATION.md
+INFRASTRUCTURE_DEPLOYMENT.md
+PRODUCTION_READINESS.md
+TEAM_DOCUMENTATION_SUMMARY.md
+CLI_SINGLE_AGENT_PRODUCTION_READINESS.md
+BUILD_AND_TEST.md

@@ -1,0 +1,242 @@
+﻿package config
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/spf13/viper"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// Config represents the CLI configuration
+type Config struct {
+	API       APIConfig       `yaml:"api"`
+	Workspace WorkspaceConfig `yaml:"workspace"`
+	Agent     AgentConfig     `yaml:"agent"`
+	Streaming StreamingConfig `yaml:"streaming"`
+	Auth      AuthConfig      `yaml:"auth"`
+}
+
+// APIConfig contains API-related configuration
+type APIConfig struct {
+	BaseURL    string `yaml:"base_url"`
+	Timeout    string `yaml:"timeout"`
+	RetryCount int    `yaml:"retry_count"`
+	UserAgent  string `yaml:"user_agent"`
+	TLSVerify  bool   `yaml:"tls_verify"`
+}
+
+// WorkspaceConfig contains workspace-related configuration
+type WorkspaceConfig struct {
+	DefaultTemplate string   `yaml:"default_template"`
+	SyncEnabled     bool     `yaml:"sync_enabled"`
+	SyncInterval    string   `yaml:"sync_interval"`
+	LocalPath       string   `yaml:"local_path"`
+	IgnorePatterns  []string `yaml:"ignore_patterns"`
+}
+
+// AgentConfig contains agent-related configuration
+type AgentConfig struct {
+	MaxIterations    int  `yaml:"max_iterations"`
+	StreamingEnabled bool `yaml:"streaming_enabled"`
+	PreserveContext  bool `yaml:"preserve_context"`
+}
+
+// StreamingConfig contains streaming-related configuration
+type StreamingConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	BufferSize     int    `yaml:"buffer_size"`
+	ReconnectDelay string `yaml:"reconnect_delay"`
+}
+
+// AuthConfig contains authentication configuration
+type AuthConfig struct {
+	APIKey         string `yaml:"api_key,omitempty"`
+	APIKeyHash     string `yaml:"api_key_hash,omitempty"`
+	RefreshToken   string `yaml:"refresh_token,omitempty"`
+	TokenExpiry    string `yaml:"token_expiry,omitempty"`
+	DefaultProject string `yaml:"default_project,omitempty"`
+}
+
+// Load loads the configuration from file
+func Load() (*Config, error) {
+	config := &Config{}
+
+	// Set defaults
+	setDefaults()
+
+	// Read configuration
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found, create default
+			if err := createDefaultConfig(); err != nil {
+				return nil, fmt.Errorf("failed to create default config: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to read config: %w", err)
+		}
+	}
+
+	// Migrate deprecated fields
+	migrateDeprecatedFields()
+
+	// Unmarshal into struct
+	if err := viper.Unmarshal(config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	return config, nil
+}
+
+// Save saves the configuration to file
+func (c *Config) Save() error {
+	// Marshal config to viper
+	viper.Set("api", c.API)
+	viper.Set("workspace", c.Workspace)
+	viper.Set("agent", c.Agent)
+	viper.Set("streaming", c.Streaming)
+	viper.Set("auth", c.Auth)
+
+	return viper.WriteConfig()
+}
+
+// SetAPIKey securely stores the API key
+func (c *Config) SetAPIKey(apiKey string) error {
+	// Hash the API key for storage (first 8 chars + hash)
+	hash, err := bcrypt.GenerateFromPassword([]byte(apiKey), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash API key: %w", err)
+	}
+
+	c.Auth.APIKey = apiKey
+	c.Auth.APIKeyHash = string(hash)
+
+	// Update viper and save
+	viper.Set("auth.api_key", apiKey)
+	viper.Set("auth.api_key_hash", string(hash))
+
+	return viper.WriteConfig()
+}
+
+// GetAPIKey returns the stored API key
+func (c *Config) GetAPIKey() string {
+	return c.Auth.APIKey
+}
+
+// ValidateAPIKey validates the stored API key
+func (c *Config) ValidateAPIKey(apiKey string) bool {
+	if c.Auth.APIKeyHash == "" {
+		return false
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(c.Auth.APIKeyHash), []byte(apiKey))
+	return err == nil
+}
+
+// GetConfigPath returns the path to the config file
+func GetConfigPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".fleeksconfig.yaml"
+	}
+	return filepath.Join(home, ".fleeksconfig.yaml")
+}
+
+// setDefaults sets default configuration values
+func setDefaults() {
+	// API defaults
+	viper.SetDefault("api.base_url", "https://api.fleeks.dev")
+	viper.SetDefault("api.timeout", "30s")
+	viper.SetDefault("api.retry_count", 3)
+	viper.SetDefault("api.user_agent", "fleeks-cli/1.0.0")
+	viper.SetDefault("api.tls_verify", true)
+
+	// Workspace defaults
+	viper.SetDefault("workspace.default_template", "python")
+	viper.SetDefault("workspace.sync_enabled", true)
+	viper.SetDefault("workspace.sync_interval", "1s")
+	viper.SetDefault("workspace.local_path", "./workspace")
+	viper.SetDefault("workspace.ignore_patterns", []string{
+		".git", ".gitignore", "node_modules", "__pycache__",
+		".DS_Store", "*.pyc", "*.pyo", ".venv", "venv",
+	})
+
+	// Agent defaults - Updated to reflect single-agent architecture
+	viper.SetDefault("agent.max_iterations", 10)
+	viper.SetDefault("agent.streaming_enabled", true)
+	viper.SetDefault("agent.preserve_context", true)
+
+	// Streaming defaults
+	viper.SetDefault("streaming.enabled", true)
+	viper.SetDefault("streaming.buffer_size", 1024)
+	viper.SetDefault("streaming.reconnect_delay", "5s")
+}
+
+// createDefaultConfig creates a default configuration file
+func createDefaultConfig() error {
+	configPath := GetConfigPath()
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Write default config
+	viper.SetConfigFile(configPath)
+	return viper.WriteConfigAs(configPath)
+}
+
+// IsConfigured checks if the CLI is properly configured
+func IsConfigured() bool {
+	config, err := Load()
+	if err != nil {
+		return false
+	}
+
+	// Check if API key is set
+	return config.Auth.APIKey != ""
+}
+
+// GetWorkspacePath returns the local workspace path
+func (c *Config) GetWorkspacePath(projectID string) string {
+	if c.Workspace.LocalPath == "" {
+		return filepath.Join(".", "workspace", projectID)
+	}
+	return filepath.Join(c.Workspace.LocalPath, projectID)
+}
+
+// ShouldIgnoreFile checks if a file should be ignored during sync
+func (c *Config) ShouldIgnoreFile(filename string) bool {
+	for _, pattern := range c.Workspace.IgnorePatterns {
+		if matched, _ := filepath.Match(pattern, filename); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, filepath.Base(filename)); matched {
+			return true
+		}
+	}
+	return false
+}
+
+// migrateDeprecatedFields removes deprecated config fields
+func migrateDeprecatedFields() {
+	modified := false
+
+	// Remove deprecated agent.default_role
+	if viper.IsSet("agent.default_role") {
+		viper.Set("agent.default_role", nil)
+		modified = true
+	}
+
+	// Remove deprecated agent.auto_handoff
+	if viper.IsSet("agent.auto_handoff") {
+		viper.Set("agent.auto_handoff", nil)
+		modified = true
+	}
+
+	// Save updated config silently
+	if modified {
+		viper.WriteConfig()
+	}
+}
