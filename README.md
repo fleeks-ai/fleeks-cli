@@ -346,33 +346,38 @@ Available templates for instant setup:
 
 ---
 
-## 🆚 Competitive Advantage
+## ✨ Key Features
 
-### vs GitHub Copilot CLI
-| Feature | Fleeks CLI | GitHub Copilot CLI |
-|---------|------------|-------------------|
-| Universal software engineer | ✅ **Handles ALL project types** | ❌ Limited to code completion |
-| Dynamic expertise | ✅ **Web, Mobile, Blockchain, Games, AI/ML, IoT** | ❌ Generic coding assistance |
-| Hybrid workspaces | ✅ **Local-cloud sync** | ❌ Local only |
-| Real-time streaming | ✅ **Live collaboration** | ❌ No streaming |
-| Container integration | ✅ **AI-managed containers** | ❌ No container support |
-| Multi-project support | ✅ **Switch between types seamlessly** | ❌ Single context only |
+### 🤖 Universal AI Software Engineer
+- **Handles ALL project types** - Web, Mobile, Blockchain, Games, AI/ML, IoT, and more
+- **Dynamic expertise adaptation** - Automatically adjusts to your project's needs
+- **Intelligent code generation** - Context-aware code suggestions and implementations
+- **Multi-language support** - 11+ project types and frameworks
 
-### vs Claude Code
-| Feature | Fleeks CLI | Claude Code |
-|---------|------------|-------------|
-| Persistent memory | ✅ **Cross-session context** | ❌ Session-based only |
-| Background execution | ✅ **Long-running tasks** | ❌ Interactive only |
-| Production deployment | ✅ **Full DevOps pipeline** | ❌ Development only |
-| Project type detection | ✅ **Automatic from conversation** | ❌ Manual specification |
+### 🌐 Hybrid Workspace Management
+- **Local-cloud synchronization** - Seamlessly sync between local and cloud environments
+- **Smart bidirectional sync** - Keep your files up-to-date across all environments
+- **Flexible deployment** - Work locally, deploy globally
 
-### vs Gemini CLI
-| Feature | Fleeks CLI | Gemini CLI |
-|---------|------------|------------|
-| Local-cloud hybrid | ✅ **Revolutionary architecture** | ❌ Cloud-only |
-| File synchronization | ✅ **Smart bidirectional sync** | ❌ Manual operations |
-| Container orchestration | ✅ **Integrated management** | ❌ No container support |
-| Polyglot expertise | ✅ **11+ project types** | ❌ General purpose |
+### 🔄 Real-Time Collaboration
+- **Live streaming** - Watch your AI agent work in real-time
+- **Background execution** - Long-running tasks continue even when you're away
+- **Progress tracking** - Monitor task execution with detailed status updates
+
+### 🐳 Container Orchestration
+- **AI-managed containers** - Intelligent container lifecycle management
+- **Integrated deployment** - Full DevOps pipeline from development to production
+- **Resource optimization** - Automatic resource allocation and scaling
+
+### 💾 Persistent Project Memory
+- **Cross-session context** - Your AI agent remembers previous conversations
+- **Project history** - Full audit trail of all changes and decisions
+- **Intelligent context switching** - Seamlessly switch between multiple projects
+
+### 🚀 Production-Ready DevOps
+- **Full CI/CD pipeline** - Automated testing, building, and deployment
+- **Environment management** - Development, staging, and production configurations
+- **Automatic project detection** - Identifies project type from conversation
 
 ---
 
