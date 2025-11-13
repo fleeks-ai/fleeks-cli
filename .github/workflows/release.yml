@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write  # For Workload Identity Federation with GCP
 
 jobs:
   build:
@@ -99,8 +100,8 @@ jobs:
           path: ${{ matrix.asset_name }}
           retention-days: 1
 
-  create-release:
-    name: Create GitHub Release
+  release:
+    name: Create Release & Upload to GCS
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -135,59 +136,155 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/740920212667/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'fleeks-cli-uploader@fleeks-ai-production.iam.gserviceaccount.com'
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload binaries to GCS (versioned)
+        working-directory: ./release
+        run: |
+          VERSION=v${{ steps.get_version.outputs.VERSION }}
+          gcloud storage cp * gs://fleeks-cli-releases/${VERSION}/ \
+            --cache-control="public, max-age=31536000, immutable" \
+            --project=fleeks-ai-production
+          
+          echo "✅ Uploaded to gs://fleeks-cli-releases/${VERSION}/"
+          echo "🌐 Available at: http://downloads.fleeks.ai/${VERSION}/"
+
+      - name: Upload installation scripts to GCS
+        run: |
+          VERSION=v${{ steps.get_version.outputs.VERSION }}
+          
+          # Upload to versioned folder
+          gcloud storage cp install.sh gs://fleeks-cli-releases/${VERSION}/install.sh \
+            --cache-control="public, max-age=31536000, immutable" \
+            --project=fleeks-ai-production
+          gcloud storage cp install.ps1 gs://fleeks-cli-releases/${VERSION}/install.ps1 \
+            --cache-control="public, max-age=31536000, immutable" \
+            --project=fleeks-ai-production
+          
+          echo "✅ Uploaded installation scripts to versioned folder"
+
+      - name: Update 'latest' folder
+        working-directory: ./release
+        run: |
+          gcloud storage cp * gs://fleeks-cli-releases/latest/ \
+            --cache-control="public, max-age=3600" \
+            --project=fleeks-ai-production
+          
+          echo "✅ Updated latest version"
+          echo "🌐 Available at: http://downloads.fleeks.ai/latest/"
+
+      - name: Upload installation scripts to root (for one-liner installs)
+        run: |
+          # Upload to root level for easy access
+          gcloud storage cp install.sh gs://fleeks-cli-releases/install.sh \
+            --cache-control="public, max-age=3600" \
+            --project=fleeks-ai-production
+          gcloud storage cp install.ps1 gs://fleeks-cli-releases/install.ps1 \
+            --cache-control="public, max-age=3600" \
+            --project=fleeks-ai-production
+          
+          # Also upload to latest folder
+          gcloud storage cp install.sh gs://fleeks-cli-releases/latest/install.sh \
+            --cache-control="public, max-age=3600" \
+            --project=fleeks-ai-production
+          gcloud storage cp install.ps1 gs://fleeks-cli-releases/latest/install.ps1 \
+            --cache-control="public, max-age=3600" \
+            --project=fleeks-ai-production
+          
+          echo "✅ Uploaded installation scripts to root and latest"
+          echo "🌐 Quick install: curl -fsSL http://downloads.fleeks.ai/install.sh | bash"
+
       - name: Generate release notes
         id: release_notes
         run: |
+          VERSION=v${{ steps.get_version.outputs.VERSION }}
           cat > release_notes.md << 'EOF'
           ## Fleeks CLI ${{ steps.get_version.outputs.VERSION }}
           
           ### Installation
           
-          #### macOS
+          #### Quick Install (Recommended)
+          
+          **macOS / Linux:**
+          ```bash
+          curl -fsSL http://downloads.fleeks.ai/install.sh | bash
+          ```
+          
+          **Windows (PowerShell):**
+          ```powershell
+          iwr -useb http://downloads.fleeks.ai/install.ps1 | iex
+          ```
+          
+          #### Manual Installation
+          
+          **macOS:**
           ```bash
           # Intel Macs
-          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-darwin-amd64 -o fleeks
+          curl -L http://downloads.fleeks.ai/${VERSION}/fleeks-darwin-amd64 -o fleeks
           chmod +x fleeks
           sudo mv fleeks /usr/local/bin/
           
-          # Apple Silicon (M1/M2)
-          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-darwin-arm64 -o fleeks
+          # Apple Silicon (M1/M2/M3)
+          curl -L http://downloads.fleeks.ai/${VERSION}/fleeks-darwin-arm64 -o fleeks
           chmod +x fleeks
           sudo mv fleeks /usr/local/bin/
           ```
           
-          #### Linux
+          **Linux:**
           ```bash
           # AMD64
-          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-linux-amd64 -o fleeks
+          curl -L http://downloads.fleeks.ai/${VERSION}/fleeks-linux-amd64 -o fleeks
           chmod +x fleeks
           sudo mv fleeks /usr/local/bin/
           
           # ARM64
-          curl -L https://github.com/fleeks-inc/fleeks-cli/releases/download/v${{ steps.get_version.outputs.VERSION }}/fleeks-linux-arm64 -o fleeks
+          curl -L http://downloads.fleeks.ai/${VERSION}/fleeks-linux-arm64 -o fleeks
           chmod +x fleeks
           sudo mv fleeks /usr/local/bin/
           ```
           
-          #### Windows
-          Download `fleeks-windows-amd64.exe` and add it to your PATH.
+          **Windows:**
+          Download [fleeks-windows-amd64.exe](http://downloads.fleeks.ai/${VERSION}/fleeks-windows-amd64.exe) and add it to your PATH.
           
-          ### Verification
-          ```bash
-          fleeks --version
-          ```
+          ### Direct Downloads
+          
+          - [Windows (x64)](http://downloads.fleeks.ai/${VERSION}/fleeks-windows-amd64.exe)
+          - [macOS (Intel)](http://downloads.fleeks.ai/${VERSION}/fleeks-darwin-amd64)
+          - [macOS (Apple Silicon)](http://downloads.fleeks.ai/${VERSION}/fleeks-darwin-arm64)
+          - [Linux (x64)](http://downloads.fleeks.ai/${VERSION}/fleeks-linux-amd64)
+          - [Linux (ARM64)](http://downloads.fleeks.ai/${VERSION}/fleeks-linux-arm64)
+          - [SHA256 Checksums](http://downloads.fleeks.ai/${VERSION}/SHA256SUMS.txt)
           
           ### What's Changed
           
           See the [CHANGELOG](CHANGELOG.md) for full details.
           
-          ### Checksums
+          ### Verification
           
-          See `SHA256SUMS.txt` for file checksums.
+          Verify your download with SHA256 checksums:
+          ```bash
+          # Download checksums
+          curl -L http://downloads.fleeks.ai/${VERSION}/SHA256SUMS.txt -o SHA256SUMS.txt
+          
+          # Verify (Linux/macOS)
+          sha256sum -c SHA256SUMS.txt --ignore-missing
+          
+          # Verify (Windows PowerShell)
+          $expected = (Get-Content SHA256SUMS.txt | Select-String "fleeks-windows-amd64.exe").ToString().Split()[0]
+          $actual = (Get-FileHash fleeks-windows-amd64.exe).Hash.ToLower()
+          if ($expected -eq $actual) { Write-Host "✓ Verified!" } else { Write-Host "✗ Hash mismatch!" }
+          ```
           EOF
           cat release_notes.md
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           name: Release v${{ steps.get_version.outputs.VERSION }}
@@ -201,7 +298,7 @@ jobs:
 
   notify:
     name: Notify Release
-    needs: create-release
+    needs: release
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -215,4 +312,5 @@ jobs:
         if: success()
         run: |
           echo "✅ Release v${{ steps.get_version.outputs.VERSION }} published successfully!"
-          echo "📦 Binaries available for: Windows, macOS (Intel/ARM), Linux (AMD64/ARM64)"
+          echo "📦 Binaries available at: http://downloads.fleeks.ai/v${{ steps.get_version.outputs.VERSION }}/"
+          echo "🚀 Users can install with: curl -fsSL http://downloads.fleeks.ai/install.sh | bash"
