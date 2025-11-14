@@ -105,6 +105,11 @@ fleeks workspace create my-project --template python
 fleeks workspace create api-service --template microservices
 fleeks workspace create frontend --template react
 
+# Workspace creation automatically provides preview URL!
+# ✅ Workspace 'my-project' created successfully!
+# 🌐 Preview URL: https://preview.fleeks.ai/my-project/
+# 🔌 WebSocket URL: wss://ws.fleeks.ai/my-project/
+
 # List workspaces
 fleeks workspace list
 
@@ -116,6 +121,24 @@ fleeks workspace sync my-project --watch
 
 # Delete workspace
 fleeks workspace delete my-project
+```
+
+### 🌐 Preview URLs (New!)
+```bash
+# Get preview URL for your workspace
+fleeks preview my-project
+
+# Open preview URL in browser
+fleeks preview my-project --open
+
+# Copy preview URL to clipboard
+fleeks preview my-project --copy
+
+# Do both!
+fleeks preview my-project --open --copy
+
+# Preview URLs provide instant HTTPS access to your running applications
+# No port forwarding or configuration needed!
 ```
 
 ### 🤖 AI Software Engineer
