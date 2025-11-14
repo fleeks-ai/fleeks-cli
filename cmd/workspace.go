@@ -184,6 +184,8 @@ type WorkspaceResponse struct {
 	Template      string    `json:"template"`
 	Description   string    `json:"description"`
 	ContainerID   string    `json:"container_id,omitempty"`
+	PreviewURL    string    `json:"preview_url"`     // Preview URL for accessing workspace app
+	WebSocketURL  string    `json:"websocket_url"`   // WebSocket URL for real-time features
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	ResourceUsage struct {
@@ -255,22 +257,45 @@ func createWorkspace(projectID string, cmd *cobra.Command) error {
 		}
 	}
 
-	// Success output
-	fmt.Printf("\n%s %s\n",
-		color.GreenString("âœ… Workspace created successfully!"),
-		color.CyanString(projectID))
-
-	fmt.Printf("Template:     %s\n", color.YellowString(response.Template))
-	fmt.Printf("Status:       %s\n", getStatusColor(response.Status))
-	if response.ContainerID != "" {
-		fmt.Printf("Container:    %s\n", color.BlueString(response.ContainerID))
+	// Success output with preview URLs
+	fmt.Println()
+	fmt.Println(color.GreenString("✅ Workspace '%s' created successfully!", projectID))
+	fmt.Println()
+	fmt.Printf("📦 Container ID: %s\n", color.BlueString(response.ContainerID))
+	fmt.Printf("🏷️  Template: %s\n", color.YellowString(response.Template))
+	if response.PreviewURL != "" {
+		fmt.Printf("🌐 Preview URL: %s\n", color.CyanString(response.PreviewURL))
 	}
-	fmt.Printf("Created:      %s\n", color.MagentaString(response.CreatedAt.Format("2006-01-02 15:04:05")))
+	if response.WebSocketURL != "" {
+		fmt.Printf("🔌 WebSocket URL: %s\n", color.CyanString(response.WebSocketURL))
+	}
+	fmt.Println()
+	fmt.Println(color.YellowString("💡 Start your application in the workspace:"))
+	
+	// Template-specific examples
+	switch response.Template {
+	case "python":
+		fmt.Printf("   %s\n", color.CyanString(fmt.Sprintf("fleeks terminal exec %s \"python -m http.server 8080\"", projectID)))
+	case "node", "nodejs":
+		fmt.Printf("   %s\n", color.CyanString(fmt.Sprintf("fleeks terminal exec %s \"npm start\"", projectID)))
+	case "go":
+		fmt.Printf("   %s\n", color.CyanString(fmt.Sprintf("fleeks terminal exec %s \"go run main.go\"", projectID)))
+	default:
+		fmt.Printf("   %s\n", color.CyanString(fmt.Sprintf("fleeks terminal exec %s \"<your-start-command>\"", projectID)))
+	}
+	
+	fmt.Println()
+	if response.PreviewURL != "" {
+		fmt.Printf("🚀 Then access it at: %s\n", color.CyanString(response.PreviewURL))
+		fmt.Println()
+	}
 
 	// Show next steps
-	fmt.Printf("\n%s\n", color.New(color.Bold).Sprint("ðŸš€ Next steps:"))
+	fmt.Printf("%s\n", color.New(color.Bold).Sprint("🚀 Next steps:"))
+	fmt.Printf("  %s\n", color.CyanString("fleeks preview "+projectID))
 	fmt.Printf("  %s\n", color.CyanString("fleeks agent start --project "+projectID+" --task \"Build authentication system\""))
 	fmt.Printf("  %s\n", color.CyanString("fleeks workspace info "+projectID))
+	fmt.Println()
 
 	return nil
 }
